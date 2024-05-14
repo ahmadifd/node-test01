@@ -1,43 +1,158 @@
 import User from "../models/User.js";
 import { isValidObjectId } from "mongoose";
 
+const queryFilter = (filter) => {
+  switch (filter.filterType) {
+    case "contains":
+      return { [filter.key]: { $regex: filter.value } };
+    case "equals":
+      return { [filter.key]: filter.value };
+    case "startsWith":
+      return { [filter.key]: { $regex: `^${filter.value}` } };
+    case "endsWith":
+      return { [filter.key]: { $regex: `${filter.value}$` } };
+    case "isEmpty":
+      return { [filter.key]: "" };
+    case "isNotEmpty":
+      return { [filter.key]: { $exists: true, $ne: "" } };
+    case "isAnyOf":
+      return { [filter.key]: filter.value };
+    case "is":
+      return { [filter.key]: filter.value };
+    case "=":
+      return { [filter.key]: filter.value };
+    case "!=":
+      return { [filter.key]: { $ne: filter.value } };
+    case ">":
+      return { [filter.key]: { $gt: filter.value } };
+    case ">=":
+      return { [filter.key]: { $gte: filter.value } };
+    case "<":
+      return { [filter.key]: { $lt: filter.value } };
+    case "<=":
+      return { [filter.key]: { $lte: filter.value } };
+  }
+};
+
+const queryQuickSearch = (quickSearch) => {
+  const srch = {
+    $or: [
+      {
+        firstName: { $regex: quickSearch },
+      },
+      {
+        lastName: { $regex: quickSearch },
+      },
+      {
+        userName: { $regex: quickSearch },
+      },
+      {
+        email: { $regex: quickSearch },
+      },
+    ],
+  };
+
+  return srch;
+};
+
 const getUsers = async (req, res) => {
-  // const book = {
-  //   title: "110",
-  //   author: "11",
-  //   pages: 110,
-  //   genres: ["110", "11"],
-  //   rating: 11,
-  // };
+  const filter = { key: "firstName", value: "1", filterType: "contains" };
+  const quickSearch = "m";
+  let fromIndex = 1;
+  const pageSize = 3;
+  const pageNumber = 0;
+  const sort = { key: "firstName", value: "asc" };
 
-  // await Book.create({
-  //   title: "110",
-  //   author: "11",
-  //   pages: 110,
-  //   genres: ["110", "11"],
-  //   rating: 11,
-  // });
+  let qry = {};
+  let srt = {};
+  if (filter !== undefined && filter) {
+    qry = { ...qry, ...queryFilter(filter) };
+  }
+  if (quickSearch !== undefined && quickSearch) {
+    qry = { $and: [qry, queryQuickSearch(quickSearch)] };
+  }
 
-  // await Author.create({
-  //   author: "11",
-  //   age: 11,
-  // });
+  if (sort !== undefined && sort) {
+    if (sort.value == "asc") {
+      srt = { [sort.key]: 1 };
+    } else if (sort.value == "desc") {
+      srt = { [sort.key]: -1 };
+    }
+  }
 
-  const result = await User.find({ name: "110" });
+  let users = {};
+  let totalCount = await User.find(qry);
+  fromIndex = pageNumber * pageSize;
+  if (totalCount >= fromIndex + pageSize) {
+    users = await User.find(qry)
+      .sort(srt)
+      .skip(fromIndex)
+      .limit(pageSize + 1)
+      .select("-password")
+      .lean();
+  } else {
+    users = await User.find(qry)
+      .sort(srt)
+      .skip(fromIndex)
+      .limit(totalCount - fromIndex)
+      .select("-password")
+      .lean();
+  }
 
-  res.send(result);
-
-  //const books = await Book.upda .find();
-  //   console.log(books);
-  //   res.send(JSON.stringify(books));
+  console.log(users);
+  res.send(users);
 };
 
-const getUser = async (req, res) => {
-  const x1 = isValidObjectId(req.params.id);
-  res.send(x1);
-};
+// let qry = [];
+// if (filter !== undefined) {
+//   qry = [
+//     ...qry,
+//     {
+//       $match: queryFilter(filter),
+//     },
+//   ];
+// }
+// if (quickSearch) {
+//   qry = [
+//     ...qry,
+//     {
+//       $match: queryQuickSearch(quickSearch),
+//     },
+//   ];
+// }
 
-export default { getUsers, getUser };
+//const result1 = await User.aggregate(qry);
+
+// const getUser = async (req, res) => {
+//   const x1 = isValidObjectId(req.params.id);
+//   res.send(x1);
+// };
+// const book = {
+//   title: "110",
+//   author: "11",
+//   pages: 110,
+//   genres: ["110", "11"],
+//   rating: 11,
+// };
+
+// await Book.create({
+//   title: "110",
+//   author: "11",
+//   pages: 110,
+//   genres: ["110", "11"],
+//   rating: 11,
+// });
+
+// await Author.create({
+//   author: "11",
+//   age: 11,
+// });
+
+//const books = await Book.upda .find();
+//   console.log(books);
+//   res.send(JSON.stringify(books));
+
+export default { getUsers };
 
 // [
 //   {

@@ -2,11 +2,20 @@ import connectDB from "../config/dbConn.js";
 import express from "express";
 import mongoose from "mongoose";
 import usersRoutes from "../routes/userRoutes.js";
-import tst1Routes from "../routes/tst1Routes.js"
+import tst1Routes from "../routes/tst1Routes.js";
+import "dotenv/config";
+import { credentials } from "../middleware/credentials.js";
+import { corsOptions } from "../config/corsOptions.js";
+import cors from "cors";
 
 const app = express();
 
 connectDB();
+
+app.use(credentials);
+
+app.use(cors(corsOptions));
+
 const PORT = process.env.PORT || 3500;
 
 app.use(express.json());

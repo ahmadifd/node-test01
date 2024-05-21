@@ -26,16 +26,35 @@ const func1 = async (req, res) => {
   if (filter !== undefined && filter) {
     qry = { ...qry, ...queryFilter(filter) };
   }
+  if (quickSearch !== undefined && quickSearch) {
+    qry = { $and: [qry, queryQuickSearch(quickSearch)] };
+  }
+
+  if (sort !== undefined && sort) {
+    if (sort.value == "asc") {
+      srt = { [sort.key]: 1 };
+    } else if (sort.value == "desc") {
+      srt = { [sort.key]: -1 };
+    }
+  }
 
   let totalCount = await User.countDocuments(qry);
   let fromIndex = pageNumber * pageSize;
-
-  users = await User.find(qry)
-  .sort(srt)
-  .skip(fromIndex)
-  .limit(totalCount - fromIndex)
-  .select("-password")
-  .lean();
+  if (totalCount >= fromIndex + pageSize) {
+    users = await User.find(qry)
+      .sort(srt)
+      .skip(fromIndex)
+      .limit(pageSize )
+      .select("-password")
+      .lean();
+  } else {
+    users = await User.find(qry)
+      .sort(srt)
+      .skip(fromIndex)
+      .limit(totalCount - fromIndex)
+      .select("-password")
+      .lean();
+  }
 
   res.json({ users, totalCount });
 };
@@ -92,64 +111,6 @@ const queryQuickSearch = (quickSearch) => {
   };
 
   return srch;
-};
-
-const getDataGridUsers = async (req, res) => {
-  console.log(req?.body);
-
-  if (req?.body?.pageNumber === undefined)
-    return controller.response({
-      res,
-      status: 400,
-      message: "Error pageNumber",
-    });
-  const pageNumber = req?.body?.pageNumber;
-  const filter = req?.body?.filter;
-  const sort = req?.body?.sort;
-  const quickSearch = req?.body?.quickSearch;
-  const pageSize = req?.body?.pageSize;
-
-  /////////////////////////////////////////////////////////////////////////
-
-   let qry = {};
-  let srt = {};
-  if (filter !== undefined && filter) {
-    qry = { ...qry, ...queryFilter(filter) };
-  }
-  if (quickSearch !== undefined && quickSearch) {
-    qry = { $and: [qry, queryQuickSearch(quickSearch)] };
-  }
-
-  if (sort !== undefined && sort) {
-    if (sort.value == "asc") {
-      srt = { [sort.key]: 1 };
-    } else if (sort.value == "desc") {
-      srt = { [sort.key]: -1 };
-    }
-  }
-
-  let users = {};
-  let totalCount = await User.count(qry);
-  let fromIndex = pageNumber * pageSize;
-  if (totalCount >= fromIndex + pageSize) {
-    users = await User.find(qry)
-      .sort(srt)
-      .skip(fromIndex)
-      .limit(pageSize + 1)
-      .select("-password")
-      .lean();
-  } else {
-    users = await User.find(qry)
-      .sort(srt)
-      .skip(fromIndex)
-      .limit(totalCount - fromIndex)
-      .select("-password")
-      .lean();
-  }
-
-  ////////////////////////////////////////////////////////////////////////
-
-   controller.response({ res, data: { users, totalCount } });
 };
 
 

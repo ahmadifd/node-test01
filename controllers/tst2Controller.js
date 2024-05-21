@@ -1,5 +1,60 @@
 import User from "../models/User.js";
 
+const queryFilter = (filter) => {
+  switch (filter.filterType) {
+    case "contains":
+      return { [filter.key]: { $regex: filter.value } };
+    case "equals":
+      return { [filter.key]: filter.value };
+    case "startsWith":
+      return { [filter.key]: { $regex: `^${filter.value}` } };
+    case "endsWith":
+      return { [filter.key]: { $regex: `${filter.value}$` } };
+    case "isEmpty":
+      return { [filter.key]: "" };
+    case "isNotEmpty":
+      return { [filter.key]: { $exists: true, $ne: "" } };
+    case "isAnyOf":
+      const items = filter.value.split(",").map((item) => new RegExp(item));
+      return {
+        [filter.key]: { $all: items },
+      };
+    case "is":
+      return { [filter.key]: filter.value };
+    case "ne":
+      return { [filter.key]: { $ne: filter.value } };
+    case "gt":
+      return { [filter.key]: { $gt: filter.value } };
+    case "gte":
+      return { [filter.key]: { $gte: filter.value } };
+    case "lt":
+      return { [filter.key]: { $lt: filter.value } };
+    case "lte":
+      return { [filter.key]: { $lte: filter.value } };
+  }
+};
+
+const queryQuickSearch = (quickSearch) => {
+  const srch = {
+    $or: [
+      {
+        firstName: { $regex: quickSearch },
+      },
+      {
+        lastName: { $regex: quickSearch },
+      },
+      {
+        userName: { $regex: quickSearch },
+      },
+      {
+        email: { $regex: quickSearch },
+      },
+    ],
+  };
+
+  return srch;
+};
+
 const func1 = async (req, res) => {
   const pageNumber = req?.body?.pageNumber;
   const filter = req?.body?.filter;
@@ -44,7 +99,7 @@ const func1 = async (req, res) => {
     users = await User.find(qry)
       .sort(srt)
       .skip(fromIndex)
-      .limit(pageSize )
+      .limit(pageSize)
       .select("-password")
       .lean();
   } else {
@@ -58,60 +113,5 @@ const func1 = async (req, res) => {
 
   res.json({ users, totalCount });
 };
-
-const queryFilter = (filter) => {
-  switch (filter.filterType) {
-    case "contains":
-      return { [filter.key]: { $regex: filter.value } };
-    case "equals":
-      return { [filter.key]: filter.value };
-    case "startsWith":
-      return { [filter.key]: { $regex: `^${filter.value}` } };
-    case "endsWith":
-      return { [filter.key]: { $regex: `${filter.value}$` } };
-    case "isEmpty":
-      return { [filter.key]: "" };
-    case "isNotEmpty":
-      return { [filter.key]: { $exists: true, $ne: "" } };
-    case "isAnyOf":
-      return { [filter.key]: filter.value };
-    case "is":
-      return { [filter.key]: filter.value };
-    case "=":
-      return { [filter.key]: filter.value };
-    case "!=":
-      return { [filter.key]: { $ne: filter.value } };
-    case ">":
-      return { [filter.key]: { $gt: filter.value } };
-    case ">=":
-      return { [filter.key]: { $gte: filter.value } };
-    case "<":
-      return { [filter.key]: { $lt: filter.value } };
-    case "<=":
-      return { [filter.key]: { $lte: filter.value } };
-  }
-};
-
-const queryQuickSearch = (quickSearch) => {
-  const srch = {
-    $or: [
-      {
-        firstName: { $regex: quickSearch },
-      },
-      {
-        lastName: { $regex: quickSearch },
-      },
-      {
-        userName: { $regex: quickSearch },
-      },
-      {
-        email: { $regex: quickSearch },
-      },
-    ],
-  };
-
-  return srch;
-};
-
 
 export default { func1 };

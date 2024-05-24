@@ -16,9 +16,10 @@ const queryFilter = (filter) => {
     case "isNotEmpty":
       return { [filter.key]: { $exists: true, $ne: "" } };
     case "isAnyOf":
-      const items = filter.value.split(",");
+      const items = filter.value.split(",").map((item) => new RegExp(item, "i"));
+      console.log(items);
       return {
-        [filter.key]: { $in: items },
+        [filter.key]: { $all: items },
       };
     case "is":
       return { [filter.key]: { $eq: filter.value } };
@@ -151,6 +152,7 @@ const func3 = async (req, res) => {
     "pageSize",
     pageSize
   );
+
   let qry = {};
   let srt = { rowNumber: 1 };
   let users = {};

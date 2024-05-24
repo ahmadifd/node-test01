@@ -12,6 +12,7 @@ const upload = multer({
   },
 });
 
-router.route("/").post(Tst2Controller.func1);
+router.route("/").post(Tst2Controller.func3);
+router.route("/").get(Tst2Controller.func2);
 
 export default router;
